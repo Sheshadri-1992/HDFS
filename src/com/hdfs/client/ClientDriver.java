@@ -31,13 +31,14 @@ public class ClientDriver {
 	public static int fileHandle;
 	public static byte[] byteArray;
 	public static FileInputStream fis;
+	public static long FILESIZE;
 	
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
 //		bindToRegistry();
 //		System.exit(0);
 		/**Allocating 32MB of memory to byteArray **/
-		byteArray = new byte[(int)Constants.BLOCK_SIZE];
+//		byteArray = new byte[(int)Constants.BLOCK_SIZE];
 		
 		fileName = args[0];
 		
@@ -170,7 +171,7 @@ public class ClientDriver {
 						System.out.println("Control enters here");
 						/**read 32MB from file, send it as bytes, this fills in the byteArray**/
 						
-						read32MBfromFile(offset);
+						byte[] byteArray = read32MBfromFile(offset);
 						offset=offset+(int)Constants.BLOCK_SIZE;
 						
 						writeBlockObj.setBlockInfo(blkLocation);
@@ -178,6 +179,8 @@ public class ClientDriver {
 						writeBlockObj.addData(ByteString.copyFrom(byteArray));
 						
 						dataStub.writeBlock(writeBlockObj.build().toByteArray());
+//						byteArray = null;
+
 						
 					}
 					
@@ -215,6 +218,7 @@ public class ClientDriver {
 		}
 		
 		long fileSize = inputFile.length();
+		FILESIZE=inputFile.length();
 		double noOfBlocks = Math.ceil(fileSize/Constants.BLOCK_SIZE);
 		
 		
@@ -222,7 +226,7 @@ public class ClientDriver {
 	}
 	
 	/**Read 32MB size of data from the provided input file **/
-	public static void read32MBfromFile(int offset)
+	public static byte[] read32MBfromFile(int offset)
 	{
 //		int bytesLeft = (int)Constants.BLOCK_SIZE; // Or whatever
 //		try
@@ -244,13 +248,28 @@ public class ClientDriver {
 //			e.printStackTrace();
 //		} 
 		
+		
+		int bytesToRead;
+		if((offset+(int)Constants.BLOCK_SIZE)>FILESIZE)
+		{
+			bytesToRead = (int)(FILESIZE - offset);
+		}
+		else
+		{
+			bytesToRead = (int)Constants.BLOCK_SIZE;
+		}
+		
+		byte[] byteArray = new byte[bytesToRead];
+		System.out.println("Bytes to read are "+bytesToRead+" Size of byte Array is "+byteArray.length);
+		
 		try {
-			fis.read(byteArray,offset,(int)Constants.BLOCK_SIZE);
+			fis.read(byteArray,0,bytesToRead);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		
+		return byteArray;
 	}
 	
 	
