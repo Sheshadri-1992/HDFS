@@ -1,10 +1,17 @@
 package com.hdfs.datanode;
 
+import static com.hdfs.miscl.Constants.DATA_NODE_ID;
+import static com.hdfs.miscl.Constants.DATA_NODE_PORT;
+import static com.hdfs.miscl.Constants.NAME_NODE;
+import static com.hdfs.miscl.Constants.NAME_NODE_IP;
+
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
-import java.net.UnknownHostException;
-import java.nio.charset.StandardCharsets;
 import java.rmi.AlreadyBoundException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
@@ -12,6 +19,7 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.Enumeration;
+import java.util.List;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.hdfs.miscl.Constants;
@@ -20,8 +28,6 @@ import com.hdfs.miscl.Hdfs.BlockReportRequest;
 import com.hdfs.miscl.Hdfs.DataNodeLocation;
 import com.hdfs.miscl.Hdfs.WriteBlockRequest;
 import com.hdfs.namenode.INameNode;
-
-import static com.hdfs.miscl.Constants.*;
 
 
 public class DataNodeDriver implements IDataNode {
@@ -51,7 +57,8 @@ public class DataNodeDriver implements IDataNode {
 			
 			int blockNumber = blockLocObj.getBlockNumber();
 			
-			String str = new String(receivedByteArray, StandardCharsets.UTF_8);
+			String str = new String(receivedByteArray);
+			System.out.println("Writing "+str.length());
 			
 			/**Write into FIle **/
 			FileWriterClass fileWriterObj = new FileWriterClass(blockNumber+"");
@@ -59,7 +66,50 @@ public class DataNodeDriver implements IDataNode {
 			fileWriterObj.writeline(str);
 			fileWriterObj.closeFile();
 			
+			File file = new File(blockNumber+"");
 			/**This is the cascading part **/
+			
+			/**This is the cascading part **/
+			
+			System.out.println("Locatons " + blockLocObj);
+			
+			if(blockLocObj.getLocationsCount()>1)
+			{
+				
+				List<DataNodeLocation> locs = blockLocObj.getLocationsList();
+				BlockLocations.Builder blkLocations = BlockLocations.newBuilder();
+				blkLocations.setBlockNumber(blockNumber);
+				
+				DataNodeLocation dataNode = locs.get(1);
+				blkLocations.addLocations(dataNode);
+				
+				Registry registry=LocateRegistry.getRegistry(dataNode.getIp(),dataNode.getPort());
+
+				System.out.println(dataNode);
+				IDataNode dataStub;
+				try {
+					dataStub = (IDataNode) registry.lookup(Constants.DATA_NODE_ID);
+					
+					WriteBlockRequest.Builder req = WriteBlockRequest.newBuilder();
+					
+					req.addData(writeBlockRequestObj.getData(0));
+					req.setBlockInfo(blkLocations);
+					
+					dataStub.writeBlock(req.build().toByteArray());
+					
+					
+				} catch (NotBoundException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				
+			
+			}
+			
+			
+			
+		
+			
 			DataNodeLocation dataLocObj = blockLocObj.getLocations(0);
 			
 			
@@ -92,11 +142,17 @@ public class DataNodeDriver implements IDataNode {
 		try
 		{
 			System.setProperty("java.rmi.server.hostname",getMyIP());
+			
 			register = LocateRegistry.createRegistry(BINDING_PORT);
 			IDataNode dataStub = (IDataNode) UnicastRemoteObject.exportObject(dataDriverObj,BINDING_PORT);
 			
 
-			register.rebind(DATA_NODE_ID,dataStub);
+			try {
+				register.bind(DATA_NODE_ID,dataStub);
+			} catch (AlreadyBoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 		catch(RemoteException e)
 		{

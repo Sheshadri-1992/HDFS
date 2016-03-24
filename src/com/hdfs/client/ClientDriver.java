@@ -10,6 +10,7 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.nio.charset.StandardCharsets;
 
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -18,6 +19,8 @@ import com.hdfs.miscl.Constants;
 import com.hdfs.miscl.Hdfs.AssignBlockRequest;
 import com.hdfs.miscl.Hdfs.AssignBlockResponse;
 import com.hdfs.miscl.Hdfs.BlockLocations;
+import com.hdfs.miscl.Hdfs.CloseFileRequest;
+import com.hdfs.miscl.Hdfs.CloseFileResponse;
 import com.hdfs.miscl.Hdfs.DataNodeLocation;
 import com.hdfs.miscl.Hdfs.OpenFileRequest;
 import com.hdfs.miscl.Hdfs.OpenFileResponse;
@@ -114,11 +117,8 @@ public class ClientDriver {
 					
 					
 					/**required variables **/
-					AssignBlockResponse assignResponseObj ;
-					BlockLocations blkLocation ;
-					List<DataNodeLocation> dataNodeLocations;
-					DataNodeLocation dataNode;
-					WriteBlockRequest.Builder writeBlockObj = WriteBlockRequest.newBuilder();
+
+					
 					int offset=0;
 					
 					/**calculate block size **/
@@ -135,6 +135,11 @@ public class ClientDriver {
 					/**FOR LOOP STARTS HERE **/
 					for(int i=0;i<no_of_blocks;i++)
 					{
+						WriteBlockRequest.Builder writeBlockObj = WriteBlockRequest.newBuilder();
+						AssignBlockResponse assignResponseObj ;
+						BlockLocations blkLocation ;
+						List<DataNodeLocation> dataNodeLocations;
+						DataNodeLocation dataNode;
 						/**need to call assign block and write blocks **/
 						
 						assgnBlockReqObj.setHandle(fileHandle);
@@ -174,14 +179,34 @@ public class ClientDriver {
 						byte[] byteArray = read32MBfromFile(offset);
 						offset=offset+(int)Constants.BLOCK_SIZE;
 						
-						writeBlockObj.setBlockInfo(blkLocation);
+						
+//						BlockLocations.Builder block_send = BlockLocations.newBuilder();
+//						block_send.setBlockNumber(blkLocation.getBlockNumber());
+//						
+//						if(blkLocation.getLocationsCount()==2)
+//							block_send.addLocations(blkLocation.getLocations(1));
+						
+//						writeBlockObj.setBlockInfo(block_send);
 //						writeBlockObj.setData(0, ByteString.copyFrom(byteArray));
 						writeBlockObj.addData(ByteString.copyFrom(byteArray));
+						writeBlockObj.setBlockInfo(blkLocation);
 						
 						dataStub.writeBlock(writeBlockObj.build().toByteArray());
 //						byteArray = null;
+						
 
 						
+					}
+					
+					CloseFileRequest.Builder closeFileObj = CloseFileRequest.newBuilder();
+					closeFileObj.setHandle(fileHandle);
+					
+					byte[] receivedArray = nameStub.closeFile(closeFileObj.build().toByteArray());
+					CloseFileResponse closeResObj = CloseFileResponse.parseFrom(receivedArray);
+					if(closeResObj.getStatus()==Constants.STATUS_FAILED)
+					{
+						System.out.println("Close File response Status Failed");
+						System.exit(0);
 					}
 					
 					try {
@@ -228,48 +253,55 @@ public class ClientDriver {
 	/**Read 32MB size of data from the provided input file **/
 	public static byte[] read32MBfromFile(int offset)
 	{
-//		int bytesLeft = (int)Constants.BLOCK_SIZE; // Or whatever
-//		try
-//		{
-//		  
-//		  
-//		    while (bytesLeft > 0) {
-//		      int read = fis.read(byteArray, 0, Math.min(bytesLeft, byteArray.length));
-//		      if (read == -1) {
-////		        throw new EOFException("Unexpected end of data");
-//		      }
-//		  
-//		      bytesLeft -= read;
-//		    }
-//		  
-//		} catch (IOException e) {
-//			// TODO Auto-generated catch block
-//			System.out.println("Its here");
-//			e.printStackTrace();
-//		} 
+		
+		System.out.println("offset is "+offset);
+
+		
+		BufferedReader breader = null;
+		try {
+			breader = new BufferedReader(new FileReader(fileName) );
+		} catch (FileNotFoundException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+		
+
 		
 		
-		int bytesToRead;
-		if((offset+(int)Constants.BLOCK_SIZE)>FILESIZE)
+		int bytesToBeRead = (int)Constants.BLOCK_SIZE;
+		
+		int limit =offset+(int)Constants.BLOCK_SIZE; 
+		
+		if(limit >= (int) FILESIZE)
 		{
-			bytesToRead = (int)(FILESIZE - offset);
+			bytesToBeRead = (int)FILESIZE - offset;
 		}
 		else
 		{
-			bytesToRead = (int)Constants.BLOCK_SIZE;
+			bytesToBeRead = (int)Constants.BLOCK_SIZE;			
 		}
 		
-		byte[] byteArray = new byte[bytesToRead];
-		System.out.println("Bytes to read are "+bytesToRead+" Size of byte Array is "+byteArray.length);
+		char[] newCharArray = new char[bytesToBeRead];
 		
 		try {
-			fis.read(byteArray,0,bytesToRead);
+			breader.skip(offset);
+			breader.read(newCharArray, 0, bytesToBeRead);
+			
+			
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}		
+		try {
+			breader.close();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		
-		return byteArray;
+		System.out.println("The new char array is "+newCharArray.length);
+		return new String(newCharArray).getBytes(StandardCharsets.UTF_8);
+		
 	}
 	
 	
@@ -279,7 +311,8 @@ public class ClientDriver {
 		try {
 			
 //			Registry registry=LocateRegistry.getRegistry(Constants.NAME_NODE_IP,Registry.REGISTRY_PORT);
-			Registry registry=LocateRegistry.getRegistry("10.2.130.36",10001);
+//			Registry registry=LocateRegistry.getRegistry("10.2.130.36",10001);
+			Registry registry=LocateRegistry.getRegistry("10.2.129.126",10002);
 			IDataNode stub;
 			try {
 				stub = (IDataNode) registry.lookup(Constants.DATA_NODE_ID);
