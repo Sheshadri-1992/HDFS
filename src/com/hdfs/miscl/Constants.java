@@ -9,5 +9,6 @@ public final class Constants {
 	public static final int DATA_NODE_PORT=10000;
 	public static final int STATUS_SUCCESS = 1;//constant by shweta
 	public static final int STATUS_NOT_FOUND = -1;//constant by shweta
+	public static final int STATUS_FAILED = 0;//constant by shweta
 	public static final double BLOCK_SIZE=32*1024*1024;
 }

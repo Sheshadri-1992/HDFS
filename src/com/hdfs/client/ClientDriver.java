@@ -35,7 +35,7 @@ public class ClientDriver {
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
 //		bindToRegistry();
-		System.exit(0);
+//		System.exit(0);
 		/**Allocating 32MB of memory to byteArray **/
 		byteArray = new byte[(int)Constants.BLOCK_SIZE];
 		
@@ -118,6 +118,7 @@ public class ClientDriver {
 					List<DataNodeLocation> dataNodeLocations;
 					DataNodeLocation dataNode;
 					WriteBlockRequest.Builder writeBlockObj = WriteBlockRequest.newBuilder();
+					int offset=0;
 					
 					/**calculate block size **/
 					int no_of_blocks=getNumberOfBlocks();					
@@ -136,13 +137,14 @@ public class ClientDriver {
 						/**need to call assign block and write blocks **/
 						
 						assgnBlockReqObj.setHandle(fileHandle);
+						
 						/**Calling assign block **/
 						responseArray = nameStub.assignBlock(assgnBlockReqObj.build().toByteArray());
 						
 						assignResponseObj = AssignBlockResponse.parseFrom(responseArray);
 						
 						status = assignResponseObj.getStatus();
-						if(status==Constants.STATUS_NOT_FOUND)
+						if(status==Constants.STATUS_FAILED)
 						{
 							System.out.println("Fatal Error!");
 							System.exit(0);
@@ -156,18 +158,24 @@ public class ClientDriver {
 						dataNodeLocations = blkLocation.getLocationsList();
 						
 						dataNode = dataNodeLocations.get(0);
-						dataNodeLocations.remove(0);
+//						dataNodeLocations.remove(0);
+						
 						
 						Registry registry2=LocateRegistry.getRegistry(dataNode.getIp(),dataNode.getPort());
+
+						System.out.println(dataNode);
 						IDataNode dataStub = (IDataNode) registry2.lookup(Constants.DATA_NODE_ID);
+						dataStub.readBlock(null);
 						
-						
-						
+						System.out.println("Control enters here");
 						/**read 32MB from file, send it as bytes, this fills in the byteArray**/
-						read32MBfromFile();
-																		
+						
+						read32MBfromFile(offset);
+						offset=offset+(int)Constants.BLOCK_SIZE;
+						
 						writeBlockObj.setBlockInfo(blkLocation);
-						writeBlockObj.setData(0, ByteString.copyFrom(byteArray));
+//						writeBlockObj.setData(0, ByteString.copyFrom(byteArray));
+						writeBlockObj.addData(ByteString.copyFrom(byteArray));
 						
 						dataStub.writeBlock(writeBlockObj.build().toByteArray());
 						
@@ -214,26 +222,34 @@ public class ClientDriver {
 	}
 	
 	/**Read 32MB size of data from the provided input file **/
-	public static void read32MBfromFile()
+	public static void read32MBfromFile(int offset)
 	{
-		int bytesLeft = (int)Constants.BLOCK_SIZE; // Or whatever
-		try
-		{
-		  
-		  
-		    while (bytesLeft > 0) {
-		      int read = fis.read(byteArray, 0, Math.min(bytesLeft, byteArray.length));
-		      if (read == -1) {
-		        throw new EOFException("Unexpected end of data");
-		      }
-		  
-		      bytesLeft -= read;
-		    }
-		  
+//		int bytesLeft = (int)Constants.BLOCK_SIZE; // Or whatever
+//		try
+//		{
+//		  
+//		  
+//		    while (bytesLeft > 0) {
+//		      int read = fis.read(byteArray, 0, Math.min(bytesLeft, byteArray.length));
+//		      if (read == -1) {
+////		        throw new EOFException("Unexpected end of data");
+//		      }
+//		  
+//		      bytesLeft -= read;
+//		    }
+//		  
+//		} catch (IOException e) {
+//			// TODO Auto-generated catch block
+//			System.out.println("Its here");
+//			e.printStackTrace();
+//		} 
+		
+		try {
+			fis.read(byteArray,offset,(int)Constants.BLOCK_SIZE);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		} 
+		}
 		
 	}
 	
@@ -243,11 +259,12 @@ public class ClientDriver {
 		
 		try {
 			
-			Registry registry=LocateRegistry.getRegistry(Constants.NAME_NODE_IP,Registry.REGISTRY_PORT);
-			INameNode stub;
+//			Registry registry=LocateRegistry.getRegistry(Constants.NAME_NODE_IP,Registry.REGISTRY_PORT);
+			Registry registry=LocateRegistry.getRegistry("10.2.130.36",10001);
+			IDataNode stub;
 			try {
-				stub = (INameNode) registry.lookup("NameNode");
-				stub.openFile(null);
+				stub = (IDataNode) registry.lookup(Constants.DATA_NODE_ID);
+				stub.readBlock(null);
 			} catch (NotBoundException e) {
 				// TODO Auto-generated catch block
 				System.out.println("Could not find NameNode");

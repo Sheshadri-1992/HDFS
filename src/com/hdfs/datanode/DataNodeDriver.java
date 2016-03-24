@@ -14,7 +14,7 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.Enumeration;
 
 import com.google.protobuf.InvalidProtocolBufferException;
-
+import com.hdfs.miscl.Constants;
 import com.hdfs.miscl.Hdfs.BlockLocations;
 import com.hdfs.miscl.Hdfs.BlockReportRequest;
 import com.hdfs.miscl.Hdfs.DataNodeLocation;
@@ -27,11 +27,12 @@ import static com.hdfs.miscl.Constants.*;
 public class DataNodeDriver implements IDataNode {
 
 	public static int id;
+	public static int BINDING_PORT;
 	
 	/**Interface methods start here **/
 	public byte[] readBlock(byte[] inp) throws RemoteException {
 		// TODO Auto-generated method stub
-		
+		System.out.println("Hello");
 		return null;
 	}
 
@@ -84,15 +85,17 @@ public class DataNodeDriver implements IDataNode {
 		
 		Registry register = null;
 		
-		int BINDING_PORT = Integer.parseInt(args[0])+DATA_NODE_PORT;
+		BINDING_PORT = Integer.parseInt(args[0])+DATA_NODE_PORT;
 		System.out.println("Binding port is "+BINDING_PORT);
 
 		//Registering an object in java RMI environment
 		try
 		{
+			System.setProperty("java.rmi.server.hostname",getMyIP());
 			register = LocateRegistry.createRegistry(BINDING_PORT);
 			IDataNode dataStub = (IDataNode) UnicastRemoteObject.exportObject(dataDriverObj,BINDING_PORT);
 			
+
 			register.rebind(DATA_NODE_ID,dataStub);
 		}
 		catch(RemoteException e)
@@ -116,7 +119,7 @@ public class DataNodeDriver implements IDataNode {
 			/**Prepare data node location**/
 			DataNodeLocation.Builder dataNodeLocObj = DataNodeLocation.newBuilder();
 			dataNodeLocObj.setIp(getMyIP());
-			dataNodeLocObj.setPort(Registry.REGISTRY_PORT);
+			dataNodeLocObj.setPort(BINDING_PORT);
 			blockRepReqObj.setLocation(dataNodeLocObj);
 			/**Set IP **/
 			blockRepReqObj.setId(id);
