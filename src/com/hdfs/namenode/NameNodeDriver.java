@@ -240,7 +240,10 @@ public class NameNodeDriver implements INameNode
 			BlockLocations.Builder blocks =  BlockLocations.newBuilder();
 			
 			
+			
 			int max = dataNodes.values().size();
+			
+			System.out.println("Data nodes size "+max);
 			
 			if(max==1)
 			{
@@ -254,16 +257,14 @@ public class NameNodeDriver implements INameNode
 				List<Integer> keys      = new ArrayList<Integer>(dataNodes.keySet());
 				Integer randomKey = keys.get( randoms[0]);
 				DataNodeLocation value     = dataNodes.get(randomKey);
-				
-		
-				
 				blocks.addLocations(value);
 				
 				randomKey = keys.get( randoms[1]);
 				value = dataNodes.get(randomKey);
+				blocks.addLocations(value);
 			}
 			
-			
+//			sSHESH WILL BE RIGHT BACK!!
 	
 			System.out.println("Num block "+numBlock);
 			blocks.setBlockNumber(numBlock);

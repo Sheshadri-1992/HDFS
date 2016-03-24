@@ -5,27 +5,21 @@ public final class Constants {
 
 	public static final String  NAME_NODE = "NameNode";  //added by shweta
 	public static final String  NAME_NODE_IP = "10.2.129.126";  //added by shweta
-
 	public static final String DATA_NODE_ID = "DataNode";//constant by sheshadri
-	public static final int DATA_NODE_PORT=10000;
-	public static final int STATUS_SUCCESS = 1;//constant by shweta
-	public static final int STATUS_NOT_FOUND = -1;//constant by shweta
+	
+	
+	public static final int STATUS_SUCCESS = 1;//constant by shweta  
+	public static final int STATUS_NOT_FOUND = -1;//only for get openfile - file not found
 	public static final int STATUS_FAILED = 0;//constant by shweta
-	public static final double BLOCK_SIZE=10024;
-	public static final String BLOCK_NUM_FILE = "BlockNum";
-//=======
-//	public static final String DATA_NODE_ID = "Datanode";//constant by sheshadri
-//	
-//	
-//	public static final int STATUS_SUCCESS = 1;//constant by shweta
-//	public static final int STATUS_NOT_FOUND = -1;//constant by shweta
-//	public static final int STATUS_FAILED = 0;//constant by shweta
 	
 	public static final String NAME_NODE_CONF = "NNConf";//constant by sheshadri
+	public static final String BLOCK_NUM_FILE = "BlockNum";//constant by sheshadri
+	public static final String DATA_NODE_CONF = "DNConf";//constant by sheshadri
 	
-//	public static final int BLOCK_SIZE=32*1024*1024;
-//	public static final int DATA_NODE_PORT=10000;
 	
-	
-//>>>>>>> 70c251cdf874505cab419e06693ee3f130b0eaf9
+	public static final int BLOCK_SIZE=32*1024*1024;
+	public static final int DATA_NODE_PORT=10000;
+	public static final long BLOCK_REPORT_FREQ = 5000;
+	public static final long HEART_BEAT_FREQ = 5000;
+
 }
