@@ -103,6 +103,7 @@ public class NameNodeDriver implements INameNode
 	public byte[] openFile(byte[] inp) throws RemoteException {
 		// TODO Auto-generated method stub
 		
+		
 		System.out.println("Open file called");
 		OpenFileResponse.Builder res = OpenFileResponse.newBuilder();
 		res.setStatus(Constants.STATUS_FAILED);
