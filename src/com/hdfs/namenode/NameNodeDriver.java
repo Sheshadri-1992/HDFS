@@ -1,11 +1,19 @@
 package com.hdfs.namenode;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.rmi.AlreadyBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
@@ -15,6 +23,8 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import com.hdfs.miscl.Constants;
 import com.hdfs.miscl.Hdfs.AssignBlockRequest;
 import com.hdfs.miscl.Hdfs.AssignBlockResponse;
+import com.hdfs.miscl.Hdfs.BlockLocationRequest;
+import com.hdfs.miscl.Hdfs.BlockLocationResponse;
 import com.hdfs.miscl.Hdfs.BlockLocations;
 import com.hdfs.miscl.Hdfs.BlockReportRequest;
 import com.hdfs.miscl.Hdfs.BlockReportResponse;
@@ -28,8 +38,9 @@ public class NameNodeDriver implements INameNode
 {
 
 	public static HashMap<Integer,DataNodeLocation>  dataNodes;   //data node id, location
-	public static HashMap<Integer,Vector<DataNodeLocation>> blockLocations;
+	public static HashMap<Integer,List<DataNodeLocation>> blockLocations;
 	public static PutFile putFile ;
+	public static GetFile getFile;
 	public static int numBlock=0;
 	
 	public static void main(String[] args) {
@@ -37,9 +48,24 @@ public class NameNodeDriver implements INameNode
 
 		dataNodes = new HashMap<>();
 		blockLocations = new HashMap<>();
-		//dataNodes.put(1,"10.0.0.2");
+		
+		DataNodeLocation.Builder loc = DataNodeLocation.newBuilder();
+		loc.setIp("10.0.0.2");
+		loc.setPort(1099);
+		
+		try {
+			
+			
+			System.out.println(InetAddress.getLocalHost().getHostAddress());
+		} catch (UnknownHostException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		dataNodes.put(1,loc.build());
 		
 		putFile = new PutFile();
+		getFile = new GetFile();
 		
 		bindToRegistry();
 		
@@ -79,6 +105,7 @@ public class NameNodeDriver implements INameNode
 		
 		System.out.println("Open file called");
 		OpenFileResponse.Builder res = OpenFileResponse.newBuilder();
+		res.setStatus(Constants.STATUS_FAILED);
 		
 		OpenFileRequest req;
 		try {
@@ -89,17 +116,30 @@ public class NameNodeDriver implements INameNode
 			
 			if(!type)   // type = false then write i.e. put
 			{
-				int fileHandle = new Random().nextInt();
+				int fileHandle = new Random().nextInt()%100000;
+				fileHandle = Math.abs(fileHandle);
+				System.out.println(fileHandle);
 			    putFile.insertFileHandle(fileName, fileHandle);
 			    
 			    res.setHandle(fileHandle);
 			    res.setStatus(Constants.STATUS_SUCCESS);
 			    
-			    return res.build().toByteArray();
+			   
 				
 				
 			}else       // type = true then read i.e get
 			{
+				Integer[] blocks = getFile.getFileDetails(fileName);
+				if(blocks==null)
+				{
+					res.setStatus(Constants.STATUS_NOT_FOUND);
+				}else
+				{
+					res.setStatus(Constants.STATUS_SUCCESS);
+					Iterable<Integer> iterable = Arrays.asList(blocks);
+					res.addAllBlockNums(iterable);
+				}
+				
 				
 			}
 			
@@ -111,7 +151,7 @@ public class NameNodeDriver implements INameNode
 		
 		
 		
-		return null;
+		return res.build().toByteArray();
 	}
 
 
@@ -125,17 +165,21 @@ public class NameNodeDriver implements INameNode
 		
 		try {
 			req = CloseFileRequest.parseFrom(inp);
+			res.setStatus(Constants.STATUS_SUCCESS);
+			
+			Integer handle = req.getHandle();
+			
+			if(handle != null)
+			{
+				putFile.removeFileHandle(handle);
+				
+			}
+			
 		} catch (InvalidProtocolBufferException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		Integer handle = req.getHandle();
 		
-		if(handle != null)
-		{
-			putFile.removeFileHandle(handle);
-			res.setStatus(Constants.STATUS_SUCCESS);
-		}
 		
 		
 		return res.build().toByteArray();
@@ -146,7 +190,29 @@ public class NameNodeDriver implements INameNode
 	@Override
 	public byte[] getBlockLocations(byte[] inp) throws RemoteException {
 		// TODO Auto-generated method stub
-		return null;
+		System.out.println("Block location called");
+		
+		BlockLocationResponse.Builder res = BlockLocationResponse.newBuilder();
+		res.setStatus(Constants.STATUS_FAILED);
+		
+		try {
+			BlockLocationRequest req = BlockLocationRequest.parseFrom(inp);
+			
+			List<Integer> blocks = req.getBlockNumsList();
+			
+			List<BlockLocations> locs  = getFile.getBlockLocations(blocks,blockLocations);
+			
+			res.setStatus(Constants.STATUS_SUCCESS);
+			res.addAllBlockLocations(locs);
+			
+		
+			
+		} catch (InvalidProtocolBufferException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		return res.build().toByteArray();
 	}
 
 
@@ -155,6 +221,7 @@ public class NameNodeDriver implements INameNode
 	public byte[] assignBlock(byte[] inp) throws RemoteException {
 		// TODO Auto-generated method stub
 		
+		System.out.println("Assign block called");
 		AssignBlockResponse.Builder res = AssignBlockResponse.newBuilder();
 		res.setStatus(Constants.STATUS_FAILED);
 		
@@ -173,22 +240,35 @@ public class NameNodeDriver implements INameNode
 			
 			
 			int max = dataNodes.values().size();
-			int [] randoms = getTwoRandoms(max); 
 			
-			List<Integer> keys      = new ArrayList<Integer>(dataNodes.keySet());
-			Integer randomKey = keys.get( randoms[0]);
-			DataNodeLocation value     = dataNodes.get(randomKey);
+			if(max==1)
+			{
+				DataNodeLocation value = (DataNodeLocation) dataNodes.values().toArray()[0];
+				blocks.addLocations(value);
+				System.out.println("Value is "+value);
+			}else
+			{
+				int [] randoms = getTwoRandoms(max); 
+				
+				List<Integer> keys      = new ArrayList<Integer>(dataNodes.keySet());
+				Integer randomKey = keys.get( randoms[0]);
+				DataNodeLocation value     = dataNodes.get(randomKey);
+				
+		
+				
+				blocks.addLocations(value);
+				
+				randomKey = keys.get( randoms[1]);
+				value = dataNodes.get(randomKey);
+			}
 			
-			blocks.addLocations(value);
 			
-			randomKey = keys.get( randoms[1]);
-			value = dataNodes.get(randomKey);
-			
-			blocks.addLocations(value);
+	
+			System.out.println("Num block "+numBlock);
 			blocks.setBlockNumber(numBlock);
-			
-			
 			res.setNewBlock(blocks);
+			
+			System.out.println("Response" + res);
 			
 			return res.build().toByteArray();
 			
@@ -231,12 +311,12 @@ public class NameNodeDriver implements INameNode
 				int numBlock = req.getBlockNumbers(i);
 				if(!blockLocations.containsKey(numBlock))
 				{
-					Vector<DataNodeLocation> arrLoc = new Vector<>();
+					List<DataNodeLocation> arrLoc = new ArrayList<DataNodeLocation>();
 					arrLoc.add(loc);
 					
 				}else
 				{
-					Vector<DataNodeLocation> tmpLoc = blockLocations.get(numBlock);
+					List<DataNodeLocation> tmpLoc = blockLocations.get(numBlock);
 					
 					if(tmpLoc.size()!=2)
 					{
@@ -249,7 +329,7 @@ public class NameNodeDriver implements INameNode
 				
 			}
 			
-			
+			System.out.print(dataNodes.get(id));
 			
 			res.addStatus(Constants.STATUS_SUCCESS);
 			
@@ -264,6 +344,7 @@ public class NameNodeDriver implements INameNode
 		}
 		
 		return res.build().toByteArray();
+//		return null;
 	}
 
 
@@ -289,6 +370,34 @@ public class NameNodeDriver implements INameNode
 	
 	public static synchronized int getBlockNum()
 	{
+		
+		
+		try {
+			
+			BufferedReader buff = new BufferedReader(new FileReader(Constants.BLOCK_NUM_FILE));
+			String line=buff.readLine();
+			buff.close();
+			
+			Integer num = Integer.parseInt(line);
+			num++;
+			PrintWriter pw;
+			try {
+				pw = new PrintWriter(new FileWriter(Constants.BLOCK_NUM_FILE));
+			    pw.write(num.toString());
+		        pw.close();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
+			return num-1;
+			
+			
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
 		return ++numBlock;
 	}
 	
@@ -315,4 +424,8 @@ public class NameNodeDriver implements INameNode
 		
 		return randoms;
 	}
+	
+	
+	
+	
 }
