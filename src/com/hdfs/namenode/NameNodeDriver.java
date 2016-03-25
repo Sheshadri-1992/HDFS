@@ -248,7 +248,7 @@ public class NameNodeDriver implements INameNode
 			{
 				DataNodeLocation value = (DataNodeLocation) dataNodes.values().toArray()[0];
 				blocks.addLocations(value);
-				System.out.println("Value is "+value);
+//				System.out.println("Value is "+value);
 			}else
 			{
 				int [] randoms = getTwoRandoms(max); 
@@ -265,7 +265,7 @@ public class NameNodeDriver implements INameNode
 			
 //			sSHESH WILL BE RIGHT BACK!!
 	
-			System.out.println("Num block "+numBlock);
+//			System.out.println("Num block "+numBlock);
 			blocks.setBlockNumber(numBlock);
 			res.setNewBlock(blocks);
 			
@@ -321,7 +321,7 @@ public class NameNodeDriver implements INameNode
 			int id = req.getId();
 			DataNodeLocation loc = req.getLocation();
 			
-			System.out.println("Data node " + req.getBlockNumbersCount());
+//			System.out.println("Data node " + req.getBlockNumbersCount());
 			
 			dataNodes.put(id,loc);
 			
@@ -352,7 +352,7 @@ public class NameNodeDriver implements INameNode
 				
 			}
 			
-			System.out.print(dataNodes.get(id));
+//			System.out.print(dataNodes.get(id));
 			
 			res.addStatus(Constants.STATUS_SUCCESS);
 			
