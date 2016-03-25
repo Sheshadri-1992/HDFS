@@ -17,7 +17,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
-import java.util.Vector;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.hdfs.miscl.Constants;
@@ -31,6 +30,10 @@ import com.hdfs.miscl.Hdfs.BlockReportResponse;
 import com.hdfs.miscl.Hdfs.CloseFileRequest;
 import com.hdfs.miscl.Hdfs.CloseFileResponse;
 import com.hdfs.miscl.Hdfs.DataNodeLocation;
+import com.hdfs.miscl.Hdfs.HeartBeatRequest;
+import com.hdfs.miscl.Hdfs.HeartBeatResponse;
+import com.hdfs.miscl.Hdfs.ListFilesRequest;
+import com.hdfs.miscl.Hdfs.ListFilesResponse;
 import com.hdfs.miscl.Hdfs.OpenFileRequest;
 import com.hdfs.miscl.Hdfs.OpenFileResponse;
 
@@ -49,20 +52,9 @@ public class NameNodeDriver implements INameNode
 		dataNodes = new HashMap<>();
 		blockLocations = new HashMap<>();
 		
-		DataNodeLocation.Builder loc = DataNodeLocation.newBuilder();
-		
-		
-		try {
-			
-			
-			System.out.println(InetAddress.getLocalHost().getHostAddress());
-		} catch (UnknownHostException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
-		dataNodes.put(1,loc.build());
-		
+//		DataNodeLocation.Builder loc = DataNodeLocation.newBuilder();	
+//		dataNodes.put(1,loc.build());
+//		
 		putFile = new PutFile();
 		getFile = new GetFile();
 		
@@ -70,7 +62,7 @@ public class NameNodeDriver implements INameNode
 		
 	}
 
-	//In case you need my computer it's password is sheshadri@1992
+
 	
 	static void bindToRegistry()
 	{
@@ -82,8 +74,11 @@ public class NameNodeDriver implements INameNode
 			INameNode stub = (INameNode) UnicastRemoteObject.exportObject(obj,Registry.REGISTRY_PORT);
 			try {
 				register.bind(Constants.NAME_NODE, stub);
+				
+				System.out.println("Name Node started succesfully");
 			} catch (AlreadyBoundException e) {
 				// TODO Auto-generated catch block
+				System.out.println("Name Node failed to bind");
 				e.printStackTrace();
 			}
 			
@@ -93,7 +88,7 @@ public class NameNodeDriver implements INameNode
 		}
 		
 		
-		System.out.println("Binded succesfully");
+		
 	}
 
 
@@ -116,28 +111,20 @@ public class NameNodeDriver implements INameNode
 			
 			if(!type)   // type = false then write i.e. put
 			{
-//				if(getFile.getFileDetails(fileName)==null)
-//				{
-//					int fileHandle = new Random().nextInt()%100000;
-//					fileHandle = Math.abs(fileHandle);
-//					System.out.println(fileHandle);
-//				    putFile.insertFileHandle(fileName, fileHandle);
-//				    
-//				    res.setHandle(fileHandle);
-//				    res.setStatus(Constants.STATUS_SUCCESS);
-//				}
-//				else
-//				{
-//					res.setStatus(Constants.STATUS_NOT_FOUND);
-//				}
-				
-				int fileHandle = new Random().nextInt()%100000;
-				fileHandle = Math.abs(fileHandle);
-				System.out.println(fileHandle);
-			    putFile.insertFileHandle(fileName, fileHandle);
-			    
-			    res.setHandle(fileHandle);
-			    res.setStatus(Constants.STATUS_SUCCESS);
+				if(getFile.getFileDetails(fileName)==null)
+				{
+					int fileHandle = new Random().nextInt()%100000;
+					fileHandle = Math.abs(fileHandle);
+					System.out.println(fileHandle);
+				    putFile.insertFileHandle(fileName, fileHandle);
+				    
+				    res.setHandle(fileHandle);
+				    res.setStatus(Constants.STATUS_SUCCESS);
+				}
+				else
+				{
+					res.setStatus(Constants.STATUS_NOT_FOUND);
+				}
 				
 			   
 				
@@ -216,8 +203,6 @@ public class NameNodeDriver implements INameNode
 			List<Integer> blocks = req.getBlockNumsList();
 			
 			List<BlockLocations> locs  = getFile.getBlockLocations(blocks,blockLocations);
-			
-			System.out.println("location "+locs);
 			
 			res.setStatus(Constants.STATUS_SUCCESS);
 			res.addAllBlockLocations(locs);
@@ -303,7 +288,23 @@ public class NameNodeDriver implements INameNode
 	@Override
 	public byte[] list(byte[] inp) throws RemoteException {
 		// TODO Auto-generated method stub
-		return null;
+
+		ListFilesResponse.Builder res = ListFilesResponse.newBuilder();
+		res.setStatus(Constants.STATUS_FAILED);
+		try {
+			ListFilesRequest req = ListFilesRequest.parseFrom(inp);
+			
+			res.addAllFileNames(getFile.getAllFileNames());
+			res.setStatus(Constants.STATUS_SUCCESS);
+			
+			
+			
+		} catch (InvalidProtocolBufferException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		return res.build().toByteArray();
 	}
 
 
@@ -332,7 +333,7 @@ public class NameNodeDriver implements INameNode
 					
 					List<DataNodeLocation> arrLoc = new ArrayList<DataNodeLocation>();
 					arrLoc.add(loc);
-					System.out.println("Added block "+numBlock);
+//					System.out.println("Added block "+numBlock);
 					
 					blockLocations.put(numBlock, arrLoc);
 					
@@ -366,7 +367,7 @@ public class NameNodeDriver implements INameNode
 		}
 		
 		return res.build().toByteArray();
-//		return null;
+
 	}
 
 
@@ -374,7 +375,17 @@ public class NameNodeDriver implements INameNode
 	@Override
 	public byte[] heartBeat(byte[] inp) throws RemoteException {
 		// TODO Auto-generated method stub
-		return null;
+		
+		HeartBeatResponse.Builder res  = HeartBeatResponse.newBuilder();
+		res.setStatus(Constants.STATUS_SUCCESS);
+		try {
+			HeartBeatRequest req = HeartBeatRequest.parseFrom(inp);
+		} catch (InvalidProtocolBufferException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		return res.build().toByteArray();
 	}
 	
 	
