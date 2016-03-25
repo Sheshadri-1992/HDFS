@@ -151,7 +151,7 @@ public class ClientDriver {
 				
 				
 				BlockLocationResponse blockLocResObj = BlockLocationResponse.parseFrom(responseArray);
-				System.out.println(blockLocResObj.toString());
+//				System.out.println(blockLocResObj.toString());
 				
 				if(blockLocResObj.getStatus()==Constants.STATUS_FAILED)
 				{

@@ -124,7 +124,7 @@ public class DataNodeDriver implements IDataNode {
 			/**Write into FIle **/
 			FileWriterClass fileWriterObj = new FileWriterClass(blockNumber+"");
 			fileWriterObj.createFile();
-			fileWriterObj.writeline(str);
+			fileWriterObj.writeonly(str);
 			fileWriterObj.closeFile();
 			
 			/*update local list of blocks */
