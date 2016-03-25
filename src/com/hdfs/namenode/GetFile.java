@@ -77,5 +77,32 @@ public class GetFile {
 		return resLocations;
 	}
 	
+	
+	List<String> getAllFileNames()
+	{
+		BufferedReader buff;
+	    List<String> fileNames = new ArrayList<>();
+		
+		try {
+			buff = new BufferedReader(new FileReader(Constants.NAME_NODE_CONF));
+			String line=null;
+			while((line = buff.readLine())!=null)
+			{
+				String token[] = line.split(":");
+				fileNames.add(token[0]);
+			}	
+			
+			buff.close();
+			
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		return fileNames;
+		
+	}
+
+	
 
 }
