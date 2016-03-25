@@ -33,9 +33,11 @@ import com.hdfs.miscl.Hdfs.BlockReportResponse;
 import com.hdfs.miscl.Hdfs.DataNodeLocation;
 import com.hdfs.miscl.Hdfs.HeartBeatRequest;
 import com.hdfs.miscl.Hdfs.HeartBeatResponse;
+import com.hdfs.miscl.Hdfs.ReadBlockRequest;
+import com.hdfs.miscl.Hdfs.ReadBlockResponse;
 import com.hdfs.miscl.Hdfs.WriteBlockRequest;
 import com.hdfs.namenode.INameNode;
-
+import com.hdfs.miscl.*;
 
 public class DataNodeDriver implements IDataNode {
 
@@ -48,7 +50,56 @@ public class DataNodeDriver implements IDataNode {
 	public byte[] readBlock(byte[] inp) throws RemoteException {
 		// TODO Auto-generated method stub
 		System.out.println("Hello");
-		return null;
+		/**Here I need to 
+		 * a) open the file
+		 * b) Read the data
+		 * c) convert into byte
+		 * d) send back
+		 */
+		
+		ReadBlockResponse.Builder readBlkResObj = ReadBlockResponse.newBuilder();
+		
+		ReadBlockRequest readBlkReqObj;
+		try {
+			readBlkReqObj = ReadBlockRequest.parseFrom(inp);
+			int blockNumber = readBlkReqObj.getBlockNumber();
+			
+			FileReaderClass fileReaderObj = new FileReaderClass(blockNumber+"");
+			fileReaderObj.openFile();
+			
+			StringBuilder myStringBuilder = new StringBuilder();
+			
+			String myLine = null;
+			try {
+				myLine = fileReaderObj.buff_reader.readLine();
+				while(myLine!=null)
+				{
+					myStringBuilder.append(myLine);
+					myLine=fileReaderObj.buff_reader.readLine();
+				}
+				
+				myLine=myStringBuilder.toString();			
+				
+				
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				System.out.println("Required File block does not exist");
+				readBlkResObj.setStatus(Constants.STATUS_FAILED);
+
+			}
+			
+			readBlkResObj.setStatus(Constants.STATUS_SUCCESS);			
+			readBlkResObj.addData(ByteString.copyFrom(myLine.getBytes()));
+			
+			
+		} catch (InvalidProtocolBufferException e) {
+			// TODO Auto-generated catch block
+			System.out.println("Invalid protobuf excpetion in ");
+			readBlkResObj.setStatus(Constants.STATUS_FAILED);
+		}
+		
+		return readBlkResObj.build().toByteArray();
+		
 	}
 
 
@@ -136,11 +187,15 @@ public class DataNodeDriver implements IDataNode {
 		// TODO Auto-generated method stub
 
 		System.out.println("Datanode");
-		dataBlocks = readBlocksFromFile();
+		
+		
 		
 		/**Need an argument from command line to uniquely identify the data Node **/
 	
 		id = Integer.parseInt(args[0]);
+		
+		dataBlocks = readBlocksFromFile();
+		System.out.println(dataBlocks);
 		
 		bindToRegistry();
 		
@@ -197,13 +252,8 @@ public class DataNodeDriver implements IDataNode {
 			
 			
 			/**DOUBT Figure out what block locations to send **/
-//			int[] blockNums = new int[3];
-//			blockNums[0]=1;
-//			blockNums[1]=2;
-//			blockNums[2]=3;
-//			
-//			for(int i=0;i<3;i++)
-//				blockRepReqObj.addBlockNumbers(blockNums[i]);
+
+
 			
 			blockRepReqObj.addAllBlockNumbers(dataBlocks);
 			
@@ -350,6 +400,7 @@ public class DataNodeDriver implements IDataNode {
 		try {
 			buff = new BufferedReader(new FileReader(Constants.DATA_NODE_CONF+id));
 			String line=null;
+
 			
 			try {
 				while((line = buff.readLine())!=null)
