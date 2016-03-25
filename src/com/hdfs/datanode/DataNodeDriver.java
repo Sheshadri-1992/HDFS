@@ -74,11 +74,12 @@ public class DataNodeDriver implements IDataNode {
 				myLine = fileReaderObj.buff_reader.readLine();
 				while(myLine!=null)
 				{
-					myStringBuilder.append(myLine);
+					myStringBuilder.append(myLine+"\n");
 					myLine=fileReaderObj.buff_reader.readLine();
 				}
 				
-				myLine=myStringBuilder.toString();			
+				
+				myLine=myStringBuilder.toString().substring(0, myStringBuilder.toString().length()-1);			
 				
 				
 			} catch (IOException e) {
@@ -129,7 +130,7 @@ public class DataNodeDriver implements IDataNode {
 			/*update local list of blocks */
 			insertBlock(blockNumber);
 			
-			System.out.println("locations "+blockLocObj);
+//			System.out.println("locations "+blockLocObj);
 			
 			
 			/**This is the cascading part **/
@@ -195,7 +196,7 @@ public class DataNodeDriver implements IDataNode {
 		id = Integer.parseInt(args[0]);
 		
 		dataBlocks = readBlocksFromFile();
-		System.out.println(dataBlocks);
+//		System.out.println(dataBlocks);
 		
 		bindToRegistry();
 		
@@ -303,7 +304,7 @@ public class DataNodeDriver implements IDataNode {
 	             {
 	                     InetAddress addr = a.nextElement();
 //	                     System.out.println("  " + addr.getHostAddress());
-	                     if(e.getName().equals("wlan0"))
+	                     if(e.getName().equals(Constants.CONNECTIVITY))
 	                     {
 	                    	myIp = addr.getHostAddress(); 
 	                     }
@@ -331,7 +332,7 @@ public class DataNodeDriver implements IDataNode {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
 					}
-            		 break;
+            		 
             	 }
             	 
              }

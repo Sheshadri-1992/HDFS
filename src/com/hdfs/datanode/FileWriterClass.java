@@ -10,7 +10,7 @@ public class FileWriterClass {
 	public 	File file_x;
 	public FileWriter writer_x;
 	
-	FileWriterClass(String filename_args)
+	public FileWriterClass(String filename_args)
 	{
 		filename = filename_args;
 	}
@@ -36,6 +36,18 @@ public class FileWriterClass {
 		{
 			writer_x.write(myline);
 			writer_x.write("\n");
+		}
+		catch(IOException e)
+		{
+			System.out.println("File IO exception in FileWriter Class");
+		}
+	}
+	
+	public void writeonly(String myline)
+	{
+		try
+		{
+			writer_x.write(myline);			
 		}
 		catch(IOException e)
 		{

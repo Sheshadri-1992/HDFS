@@ -24,13 +24,15 @@ import com.hdfs.miscl.Hdfs.BlockLocations;
 import com.hdfs.miscl.Hdfs.CloseFileRequest;
 import com.hdfs.miscl.Hdfs.CloseFileResponse;
 import com.hdfs.miscl.Hdfs.DataNodeLocation;
+import com.hdfs.miscl.Hdfs.ListFilesRequest;
+import com.hdfs.miscl.Hdfs.ListFilesResponse;
 import com.hdfs.miscl.Hdfs.OpenFileRequest;
 import com.hdfs.miscl.Hdfs.OpenFileResponse;
 import com.hdfs.miscl.Hdfs.ReadBlockRequest;
 import com.hdfs.miscl.Hdfs.ReadBlockResponse;
 import com.hdfs.miscl.Hdfs.WriteBlockRequest;
 import com.hdfs.namenode.INameNode;
-
+import com.hdfs.datanode.*;
 public class ClientDriver {
 
 	public static String fileName;
@@ -61,12 +63,45 @@ public class ClientDriver {
 		else if(args[1].toLowerCase().equals("list"))
 		{
 			//Calls the list method of the name node server
+			callListBlocks();
 		}
-			
-//		openFileGet();
+		
 				
 	}
-	
+
+	/**Call list blocks from Name node server**/
+	public static void callListBlocks()
+	{
+		ListFilesRequest.Builder listFileReqObj = ListFilesRequest.newBuilder();
+		listFileReqObj.setDirName("Shweta , Lamport and Berkeley, Sheshadri :)");		
+		
+		Registry registry;
+		try {
+			registry = LocateRegistry.getRegistry(Constants.NAME_NODE_IP,Registry.REGISTRY_PORT);
+			INameNode nameStub;
+			nameStub=(INameNode) registry.lookup(Constants.NAME_NODE);
+			
+			byte[] responseArray = nameStub.list(listFileReqObj.build().toByteArray());
+			try {
+				ListFilesResponse listFileResObj = ListFilesResponse.parseFrom(responseArray);
+				List<String> fileNames = listFileResObj.getFileNamesList();
+				
+				System.out.println("File names are "+fileNames.toString());
+				
+				
+			} catch (InvalidProtocolBufferException e) {
+				 
+				System.out.println("InvalidProtocolBufferException caught in callListBlocks: ClientDriverClass");
+			}
+			
+		} catch (RemoteException | NotBoundException e) {
+			
+			System.out.println("Exception caught in callListBlocks: ClientDriverClass");
+			
+		}
+		
+		
+	}
 	
 	
 	/**Open file request method 
@@ -78,6 +113,10 @@ public class ClientDriver {
 		OpenFileRequest.Builder openFileReqObj = OpenFileRequest.newBuilder();
 		openFileReqObj.setFileName(fileName);		
 		openFileReqObj.setForRead(true);
+		
+		
+		FileWriterClass fileWriteObj = new FileWriterClass(Constants.OUTPUT_FILE+fileName);
+		fileWriteObj.createFile();
 		
 		byte[] responseArray;
 		
@@ -98,11 +137,16 @@ public class ClientDriver {
 				List<Integer> blockNums = responseObj.getBlockNumsList();
 				BlockLocationRequest.Builder blockLocReqObj = BlockLocationRequest.newBuilder();
 				
-				System.out.println(blockNums);
+//				System.out.println(blockNums);
 				/**Now perform Read Block Request  from all the blockNums**/
 				blockLocReqObj.addAllBlockNums(blockNums);
 												
-				responseArray = nameStub.getBlockLocations(blockLocReqObj.build().toByteArray());
+				try {
+					responseArray = nameStub.getBlockLocations(blockLocReqObj.build().toByteArray());
+				} catch (RemoteException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
 				
 				
 				
@@ -117,6 +161,7 @@ public class ClientDriver {
 				
 				List<BlockLocations> blockLocations =  blockLocResObj.getBlockLocationsList();
 				
+				
 				for(int i=0;i<blockLocations.size();i++)
 				{
 					BlockLocations thisBlock = blockLocations.get(i);
@@ -124,31 +169,70 @@ public class ClientDriver {
 					int blockNumber = thisBlock.getBlockNumber();					
 					List<DataNodeLocation> dataNodes = thisBlock.getLocationsList();
 					
-					DataNodeLocation thisDataNode = dataNodes.get(0);
+					if(dataNodes==null || dataNodes.size()==0)
+					{
+						System.out.println("All nodes are down :( ");
+						System.exit(0);
+					}
 					
-					String ip = thisDataNode.getIp();
-					int port = thisDataNode.getPort();
+					int dataNodeCounter=0;
 					
-					Registry registry2=LocateRegistry.getRegistry(ip,port);					
-					IDataNode dataStub = (IDataNode) registry2.lookup(Constants.DATA_NODE_ID);
+					DataNodeLocation thisDataNode = null;//dataNodes.get(dataNodeCounter);					
+					String ip;// = thisDataNode.getIp();
+					int port ; //= thisDataNode.getPort();
+					
+					
+					IDataNode dataStub=null;
+					
+					boolean gotDataNodeFlag=false;
+					
+					do
+					{
+						try
+						{
+							thisDataNode = dataNodes.get(dataNodeCounter);
+							ip = thisDataNode.getIp();
+							port = thisDataNode.getPort();
+														
+							Registry registry2=LocateRegistry.getRegistry(ip,port);					
+							dataStub = (IDataNode) registry2.lookup(Constants.DATA_NODE_ID);
+							gotDataNodeFlag=true;
+						}
+						catch (RemoteException e) {
+							
+							gotDataNodeFlag=false;
+//							System.out.println("Remote Exception");
+							dataNodeCounter++;
+						} 
+					}					
+					while(gotDataNodeFlag==false && dataNodeCounter<dataNodes.size());
+					
+					if(dataNodeCounter == dataNodes.size())
+					{
+						System.out.println("All data nodes are down :( ");
+						System.exit(0);
+					}
 
 					/**Construct Read block request **/
 					ReadBlockRequest.Builder readBlockReqObj = ReadBlockRequest.newBuilder();
 					readBlockReqObj.setBlockNumber(blockNumber);
 					
 					/**Read block request call **/
-					responseArray = dataStub.readBlock(readBlockReqObj.build().toByteArray());
-					ReadBlockResponse readBlockResObj = ReadBlockResponse.parseFrom(responseArray);
-					
-					if(readBlockResObj.getStatus()==Constants.STATUS_FAILED)
-					{
-						System.out.println("In method openFileGet(), readError");
-						System.exit(0);
-					}
-					
-					responseArray = readBlockResObj.getData(0).toByteArray();
-					String str = new String(responseArray, StandardCharsets.UTF_8);
-					System.out.println("THIS IS THE STRING "+str);
+											
+						responseArray = dataStub.readBlock(readBlockReqObj.build().toByteArray());
+						ReadBlockResponse readBlockResObj = ReadBlockResponse.parseFrom(responseArray);
+						
+						if(readBlockResObj.getStatus()==Constants.STATUS_FAILED)
+						{
+							System.out.println("In method openFileGet(), readError");
+							System.exit(0);
+						}
+						
+						responseArray = readBlockResObj.getData(0).toByteArray();
+						String str = new String(responseArray, StandardCharsets.UTF_8);
+//						System.out.print(str);
+						fileWriteObj.writeonly(str);
+
 				}
 				
 				
@@ -156,13 +240,13 @@ public class ClientDriver {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-		} catch (RemoteException e) {
-			
-			System.out.println("Remote Exception");
 		} catch (NotBoundException e) {
 			System.out.println("Exception caught: NotBoundException ");			
+		} catch (RemoteException e2) {
+			// TODO Auto-generated catch block
+			e2.printStackTrace();
 		}
-		
+		fileWriteObj.closeFile();
 		
 	}
 	
@@ -225,9 +309,10 @@ public class ClientDriver {
 						e.printStackTrace();
 					}
 
-					System.out.println("No of blocks are "+no_of_blocks);
+//					System.out.println("No of blocks are "+no_of_blocks);
 					if(no_of_blocks==0)
 						no_of_blocks=1;
+					
 					/**FOR LOOP STARTS HERE **/
 					for(int i=0;i<no_of_blocks;i++)
 					{
@@ -269,7 +354,7 @@ public class ClientDriver {
 						IDataNode dataStub = (IDataNode) registry2.lookup(Constants.DATA_NODE_ID);
 //						dataStub.readBlock(null);
 						
-						System.out.println("Control enters here");
+//						System.out.println("Control enters here");
 						/**read 32MB from file, send it as bytes, this fills in the byteArray**/
 						
 						byte[] byteArray = read32MBfromFile(offset);
@@ -328,8 +413,9 @@ public class ClientDriver {
 		
 		long fileSize = inputFile.length();
 		FILESIZE=inputFile.length();
-		double noOfBlocks = Math.ceil(fileSize/Constants.BLOCK_SIZE);
+		double noOfBlocks = Math.ceil((double)fileSize*1.0/(double)Constants.BLOCK_SIZE*1.0);
 		
+//		System.out.println("The length of the file is "+fileSize+ " Number of blocks are "+(int)noOfBlocks);
 		
 		return (int)noOfBlocks;
 	}
@@ -383,12 +469,14 @@ public class ClientDriver {
 			e.printStackTrace();
 		}
 		
-		System.out.println("The new char array is "+newCharArray.length);
+//		System.out.println("The new char array is "+newCharArray.length);
 		return new String(newCharArray).getBytes(StandardCharsets.UTF_8);
 		
 	}
 	
 	
+	
+	/**TEST CODE **/
 	static void bindToRegistry()
 	{
 		
