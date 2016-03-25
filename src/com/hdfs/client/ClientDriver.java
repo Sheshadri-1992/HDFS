@@ -18,12 +18,16 @@ import com.hdfs.datanode.IDataNode;
 import com.hdfs.miscl.Constants;
 import com.hdfs.miscl.Hdfs.AssignBlockRequest;
 import com.hdfs.miscl.Hdfs.AssignBlockResponse;
+import com.hdfs.miscl.Hdfs.BlockLocationRequest;
+import com.hdfs.miscl.Hdfs.BlockLocationResponse;
 import com.hdfs.miscl.Hdfs.BlockLocations;
 import com.hdfs.miscl.Hdfs.CloseFileRequest;
 import com.hdfs.miscl.Hdfs.CloseFileResponse;
 import com.hdfs.miscl.Hdfs.DataNodeLocation;
 import com.hdfs.miscl.Hdfs.OpenFileRequest;
 import com.hdfs.miscl.Hdfs.OpenFileResponse;
+import com.hdfs.miscl.Hdfs.ReadBlockRequest;
+import com.hdfs.miscl.Hdfs.ReadBlockResponse;
 import com.hdfs.miscl.Hdfs.WriteBlockRequest;
 import com.hdfs.namenode.INameNode;
 
@@ -59,7 +63,7 @@ public class ClientDriver {
 			//Calls the list method of the name node server
 		}
 			
-
+//		openFileGet();
 				
 	}
 	
@@ -74,6 +78,91 @@ public class ClientDriver {
 		OpenFileRequest.Builder openFileReqObj = OpenFileRequest.newBuilder();
 		openFileReqObj.setFileName(fileName);		
 		openFileReqObj.setForRead(true);
+		
+		byte[] responseArray;
+		
+		try {
+			Registry registry=LocateRegistry.getRegistry(Constants.NAME_NODE_IP,Registry.REGISTRY_PORT);
+			INameNode nameStub;
+			nameStub=(INameNode) registry.lookup(Constants.NAME_NODE);
+			responseArray = nameStub.openFile(openFileReqObj.build().toByteArray());
+			
+			try {
+				OpenFileResponse responseObj = OpenFileResponse.parseFrom(responseArray);
+				if(responseObj.getStatus()==Constants.STATUS_NOT_FOUND)
+				{
+					System.out.println("File not found fatal error");
+					System.exit(0);
+				}
+				
+				List<Integer> blockNums = responseObj.getBlockNumsList();
+				BlockLocationRequest.Builder blockLocReqObj = BlockLocationRequest.newBuilder();
+				
+				System.out.println(blockNums);
+				/**Now perform Read Block Request  from all the blockNums**/
+				blockLocReqObj.addAllBlockNums(blockNums);
+												
+				responseArray = nameStub.getBlockLocations(blockLocReqObj.build().toByteArray());
+				
+				
+				
+				BlockLocationResponse blockLocResObj = BlockLocationResponse.parseFrom(responseArray);
+				System.out.println(blockLocResObj.toString());
+				
+				if(blockLocResObj.getStatus()==Constants.STATUS_FAILED)
+				{
+					System.out.println("Fatal error!");
+					System.exit(0);
+				}
+				
+				List<BlockLocations> blockLocations =  blockLocResObj.getBlockLocationsList();
+				
+				for(int i=0;i<blockLocations.size();i++)
+				{
+					BlockLocations thisBlock = blockLocations.get(i);
+					
+					int blockNumber = thisBlock.getBlockNumber();					
+					List<DataNodeLocation> dataNodes = thisBlock.getLocationsList();
+					
+					DataNodeLocation thisDataNode = dataNodes.get(0);
+					
+					String ip = thisDataNode.getIp();
+					int port = thisDataNode.getPort();
+					
+					Registry registry2=LocateRegistry.getRegistry(ip,port);					
+					IDataNode dataStub = (IDataNode) registry2.lookup(Constants.DATA_NODE_ID);
+
+					/**Construct Read block request **/
+					ReadBlockRequest.Builder readBlockReqObj = ReadBlockRequest.newBuilder();
+					readBlockReqObj.setBlockNumber(blockNumber);
+					
+					/**Read block request call **/
+					responseArray = dataStub.readBlock(readBlockReqObj.build().toByteArray());
+					ReadBlockResponse readBlockResObj = ReadBlockResponse.parseFrom(responseArray);
+					
+					if(readBlockResObj.getStatus()==Constants.STATUS_FAILED)
+					{
+						System.out.println("In method openFileGet(), readError");
+						System.exit(0);
+					}
+					
+					responseArray = readBlockResObj.getData(0).toByteArray();
+					String str = new String(responseArray, StandardCharsets.UTF_8);
+					System.out.println("THIS IS THE STRING "+str);
+				}
+				
+				
+			} catch (InvalidProtocolBufferException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		} catch (RemoteException e) {
+			
+			System.out.println("Remote Exception");
+		} catch (NotBoundException e) {
+			System.out.println("Exception caught: NotBoundException ");			
+		}
+		
 		
 	}
 	
@@ -107,9 +196,14 @@ public class ClientDriver {
 					System.out.println("The file handle is "+fileHandle);
 					
 					status = responseObj.getStatus();
-					if(status==Constants.STATUS_NOT_FOUND)//status failed change it
+					if(status==Constants.STATUS_FAILED )//status failed change it
 					{
 						System.out.println("Fatal Error!");
+						System.exit(0);
+					}
+					else if(status==Constants.STATUS_NOT_FOUND)
+					{
+						System.out.println("Duplicate File");
 						System.exit(0);
 					}
 					
@@ -131,7 +225,9 @@ public class ClientDriver {
 						e.printStackTrace();
 					}
 
-					
+					System.out.println("No of blocks are "+no_of_blocks);
+					if(no_of_blocks==0)
+						no_of_blocks=1;
 					/**FOR LOOP STARTS HERE **/
 					for(int i=0;i<no_of_blocks;i++)
 					{
@@ -171,7 +267,7 @@ public class ClientDriver {
 
 						System.out.println(dataNode);
 						IDataNode dataStub = (IDataNode) registry2.lookup(Constants.DATA_NODE_ID);
-						dataStub.readBlock(null);
+//						dataStub.readBlock(null);
 						
 						System.out.println("Control enters here");
 						/**read 32MB from file, send it as bytes, this fills in the byteArray**/
@@ -179,23 +275,11 @@ public class ClientDriver {
 						byte[] byteArray = read32MBfromFile(offset);
 						offset=offset+(int)Constants.BLOCK_SIZE;
 						
-						
-//						BlockLocations.Builder block_send = BlockLocations.newBuilder();
-//						block_send.setBlockNumber(blkLocation.getBlockNumber());
-//						
-//						if(blkLocation.getLocationsCount()==2)
-//							block_send.addLocations(blkLocation.getLocations(1));
-						
-//						writeBlockObj.setBlockInfo(block_send);
-//						writeBlockObj.setData(0, ByteString.copyFrom(byteArray));
 						writeBlockObj.addData(ByteString.copyFrom(byteArray));
 						writeBlockObj.setBlockInfo(blkLocation);
 						
 						dataStub.writeBlock(writeBlockObj.build().toByteArray());
-//						byteArray = null;
-						
-
-						
+												
 					}
 					
 					CloseFileRequest.Builder closeFileObj = CloseFileRequest.newBuilder();
