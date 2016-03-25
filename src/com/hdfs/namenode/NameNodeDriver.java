@@ -50,8 +50,7 @@ public class NameNodeDriver implements INameNode
 		blockLocations = new HashMap<>();
 		
 		DataNodeLocation.Builder loc = DataNodeLocation.newBuilder();
-		loc.setIp("10.0.0.2");
-		loc.setPort(1099);
+		
 		
 		try {
 			
@@ -117,6 +116,21 @@ public class NameNodeDriver implements INameNode
 			
 			if(!type)   // type = false then write i.e. put
 			{
+//				if(getFile.getFileDetails(fileName)==null)
+//				{
+//					int fileHandle = new Random().nextInt()%100000;
+//					fileHandle = Math.abs(fileHandle);
+//					System.out.println(fileHandle);
+//				    putFile.insertFileHandle(fileName, fileHandle);
+//				    
+//				    res.setHandle(fileHandle);
+//				    res.setStatus(Constants.STATUS_SUCCESS);
+//				}
+//				else
+//				{
+//					res.setStatus(Constants.STATUS_NOT_FOUND);
+//				}
+				
 				int fileHandle = new Random().nextInt()%100000;
 				fileHandle = Math.abs(fileHandle);
 				System.out.println(fileHandle);
@@ -124,7 +138,7 @@ public class NameNodeDriver implements INameNode
 			    
 			    res.setHandle(fileHandle);
 			    res.setStatus(Constants.STATUS_SUCCESS);
-			    
+				
 			   
 				
 				
@@ -203,6 +217,8 @@ public class NameNodeDriver implements INameNode
 			
 			List<BlockLocations> locs  = getFile.getBlockLocations(blocks,blockLocations);
 			
+			System.out.println("location "+locs);
+			
 			res.setStatus(Constants.STATUS_SUCCESS);
 			res.addAllBlockLocations(locs);
 			
@@ -215,8 +231,6 @@ public class NameNodeDriver implements INameNode
 		
 		return res.build().toByteArray();
 	}
-
-
 
 	@Override
 	public byte[] assignBlock(byte[] inp) throws RemoteException {
@@ -306,6 +320,8 @@ public class NameNodeDriver implements INameNode
 			int id = req.getId();
 			DataNodeLocation loc = req.getLocation();
 			
+			System.out.println("Data node " + req.getBlockNumbersCount());
+			
 			dataNodes.put(id,loc);
 			
 			for(int i=0;i<req.getBlockNumbersCount();i++)
@@ -313,8 +329,12 @@ public class NameNodeDriver implements INameNode
 				int numBlock = req.getBlockNumbers(i);
 				if(!blockLocations.containsKey(numBlock))
 				{
+					
 					List<DataNodeLocation> arrLoc = new ArrayList<DataNodeLocation>();
 					arrLoc.add(loc);
+					System.out.println("Added block "+numBlock);
+					
+					blockLocations.put(numBlock, arrLoc);
 					
 				}else
 				{
