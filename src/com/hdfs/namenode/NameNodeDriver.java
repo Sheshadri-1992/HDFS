@@ -312,7 +312,7 @@ public class NameNodeDriver implements INameNode
 	@Override
 	public byte[] blockReport(byte[] inp) throws RemoteException {
 		// TODO Auto-generated method stub
-		System.out.println("Block report called");
+//		System.out.println("Block report called");
 		BlockReportResponse.Builder res = BlockReportResponse.newBuilder();
 		
 		try {
