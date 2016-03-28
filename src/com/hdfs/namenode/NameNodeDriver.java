@@ -482,7 +482,7 @@ public class NameNodeDriver implements INameNode
 				{
 //					System.out.print("hello");
 					List<Integer> remove = new ArrayList<>();
-					for(HashMap.Entry<Integer,Long > entry : heartBeatDataNodes.entrySet())
+					for(Map.Entry<Integer,Long > entry : heartBeatDataNodes.entrySet())
 					{
 //						System.out.println("current heartbeat datanode "+new Date().getTime() + entry.getValue() + entry.getKey());
 						if(new Date().getTime() - entry.getValue() > Constants.HEART_BEAT_FREQ)
