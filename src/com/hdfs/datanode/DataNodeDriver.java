@@ -67,19 +67,27 @@ public class DataNodeDriver implements IDataNode {
 			FileReaderClass fileReaderObj = new FileReaderClass(blockNumber+"");
 			fileReaderObj.openFile();
 			
-			StringBuilder myStringBuilder = new StringBuilder();
+//			StringBuilder myStringBuilder = new StringBuilder();
 			
-			String myLine = null;
+			String myLine = "";
+			char c;
 			try {
-				myLine = fileReaderObj.buff_reader.readLine();
-				while(myLine!=null)
+//				myLine = fileReaderObj.buff_reader.readLine();
+				int character = fileReaderObj.buff_reader.read();
+				while(character!=-1)
 				{
-					myStringBuilder.append(myLine+"\n");
-					myLine=fileReaderObj.buff_reader.readLine();
+//					myStringBuilder.append(myLine+"\n");
+//					myLine=fileReaderObj.buff_reader.readLine();
+					c = (char) character;
+					myLine = myLine + c; 
+					
+					character =  fileReaderObj.buff_reader.read();		
+					
+					
 				}
 				
 				
-				myLine=myStringBuilder.toString().substring(0, myStringBuilder.toString().length()-1);			
+//				myLine=myStringBuilder.toString().substring(0, myStringBuilder.toString().length()-1);			
 				
 				
 			} catch (IOException e) {
