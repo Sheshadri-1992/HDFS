@@ -387,7 +387,7 @@ public class DataNodeDriver implements IDataNode {
 					try {
 						register = LocateRegistry.getRegistry(NAME_NODE_IP,Registry.REGISTRY_PORT);
 						 INameNode nameNodeStub = (INameNode)register.lookup(NAME_NODE);
-		         		 byte[] result =  nameNodeStub.blockReport(req.build().toByteArray());
+		         		 byte[] result =  nameNodeStub.heartBeat(req.build().toByteArray());
 		         		 
 		         		 try {
 							HeartBeatResponse res = HeartBeatResponse.parseFrom(result);

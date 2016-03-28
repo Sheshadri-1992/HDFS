@@ -14,8 +14,10 @@ import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -42,6 +44,7 @@ public class NameNodeDriver implements INameNode
 
 	public static HashMap<Integer,DataNodeLocation>  dataNodes;   //data node id, location
 	public static HashMap<Integer,List<DataNodeLocation>> blockLocations;
+	public static HashMap<Integer,Long>  heartBeatDataNodes; 
 	public static PutFile putFile ;
 	public static GetFile getFile;
 	public static int numBlock=0;
@@ -51,6 +54,7 @@ public class NameNodeDriver implements INameNode
 
 		dataNodes = new HashMap<>();
 		blockLocations = new HashMap<>();
+		heartBeatDataNodes = new HashMap<>();
 		
 //		DataNodeLocation.Builder loc = DataNodeLocation.newBuilder();	
 //		dataNodes.put(1,loc.build());
@@ -59,6 +63,7 @@ public class NameNodeDriver implements INameNode
 		getFile = new GetFile();
 		
 		bindToRegistry();
+		checkIfDataNodeIsAlive();
 		
 	}
 
@@ -98,7 +103,7 @@ public class NameNodeDriver implements INameNode
 		// TODO Auto-generated method stub
 		
 		
-//		System.out.println("Open file called");
+		System.out.println("Open file called");
 		OpenFileResponse.Builder res = OpenFileResponse.newBuilder();
 		res.setStatus(Constants.STATUS_FAILED);
 		
@@ -221,7 +226,7 @@ public class NameNodeDriver implements INameNode
 	public byte[] assignBlock(byte[] inp) throws RemoteException {
 		// TODO Auto-generated method stub
 		
-//		System.out.println("Assign block called");
+		System.out.println("Assign block called");
 		AssignBlockResponse.Builder res = AssignBlockResponse.newBuilder();
 		res.setStatus(Constants.STATUS_FAILED);
 		
@@ -376,10 +381,13 @@ public class NameNodeDriver implements INameNode
 	public byte[] heartBeat(byte[] inp) throws RemoteException {
 		// TODO Auto-generated method stub
 		
+//	System.out.println("Got heart beat " + new Date().getTime());
 		HeartBeatResponse.Builder res  = HeartBeatResponse.newBuilder();
 		res.setStatus(Constants.STATUS_SUCCESS);
 		try {
 			HeartBeatRequest req = HeartBeatRequest.parseFrom(inp);
+			heartBeatDataNodes.put(req.getId(), new Date().getTime());
+			
 		} catch (InvalidProtocolBufferException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -459,6 +467,54 @@ public class NameNodeDriver implements INameNode
 	}
 	
 	
+	private static void checkIfDataNodeIsAlive()
+	{
+		
+		new Thread(new Runnable() {
+			
+			@Override
+			public void run() {
+				// TODO Auto-generated method stub
+				
+			
+				
+				while(true)
+				{
+//					System.out.print("hello");
+					List<Integer> remove = new ArrayList<>();
+					for(HashMap.Entry<Integer,Long > entry : heartBeatDataNodes.entrySet())
+					{
+//						System.out.println("current heartbeat datanode "+new Date().getTime() + entry.getValue() + entry.getKey());
+						if(new Date().getTime() - entry.getValue() > Constants.HEART_BEAT_FREQ)
+						{
+							dataNodes.remove(entry.getKey());
+							System.out.println("Data node  " + entry.getKey() + " is dead");
+							remove.add(entry.getKey());
+							
+						}
+					}
+					
+					for(Integer key : remove)
+					{
+						heartBeatDataNodes.remove(key);
+					}
+					
+					
+					try {
+						Thread.sleep(Constants.HEART_BEAT_FREQ+1000);
+					} catch (InterruptedException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				}
+				
+				
+			}
+		}).start();
+		
+		
+		
+	}
 	
 	
 }
