@@ -118,13 +118,13 @@ public class DataNodeDriver implements IDataNode {
 		byte[] receivedByteArray;
 		
 		try {
-			WriteBlockRequest writeBlockRequestObj = WriteBlockRequest.parseFrom(inp);
+			final WriteBlockRequest writeBlockRequestObj = WriteBlockRequest.parseFrom(inp);
 			/**Received Byte array **/
 			receivedByteArray = writeBlockRequestObj.getData(0).toByteArray();
 			/**Block locations object **/
-			BlockLocations blockLocObj = writeBlockRequestObj.getBlockInfo();
+			final BlockLocations blockLocObj = writeBlockRequestObj.getBlockInfo();
 			
-			int blockNumber = blockLocObj.getBlockNumber();
+			final int blockNumber = blockLocObj.getBlockNumber();
 			
 			
 			String str = new String(receivedByteArray, StandardCharsets.UTF_8);
@@ -146,33 +146,21 @@ public class DataNodeDriver implements IDataNode {
 			if(blockLocObj.getLocationsCount()>1)
 			{
 				
-				List<DataNodeLocation> locs = blockLocObj.getLocationsList();
-				BlockLocations.Builder blkLocations = BlockLocations.newBuilder();
-				blkLocations.setBlockNumber(blockNumber);
+				 new Thread(new Runnable() {
+		             @Override
+		             public void run() {
+		            	 try {
+							sendToNextDataNode(blockLocObj,blockNumber,writeBlockRequestObj);
+						} catch (RemoteException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+		             }
+		         }).start();
 				
-				DataNodeLocation dataNode = locs.get(1);
 				
 				
-				blkLocations.addLocations(dataNode);
 				
-				Registry registry=LocateRegistry.getRegistry(dataNode.getIp(),dataNode.getPort());
-
-				IDataNode dataStub;
-				try {
-					dataStub = (IDataNode) registry.lookup(Constants.DATA_NODE_ID);
-					
-					WriteBlockRequest.Builder req = WriteBlockRequest.newBuilder();
-					
-					req.addData(writeBlockRequestObj.getData(0));
-					req.setBlockInfo(blkLocations);
-					
-					dataStub.writeBlock(req.build().toByteArray());
-					
-					
-				} catch (NotBoundException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
 				
 			
 			}
@@ -189,7 +177,43 @@ public class DataNodeDriver implements IDataNode {
 		return null;
 	}
 
-	/**Interface methods end here **/
+	/**Interface methods end here 
+	 * @param blockLocObj 
+	 * @param blockNumber 
+	 * @param writeBlockRequestObj 
+	 * @throws RemoteException **/
+	
+	
+	public static void sendToNextDataNode(BlockLocations blockLocObj, int blockNumber, WriteBlockRequest writeBlockRequestObj) throws RemoteException
+	{
+		List<DataNodeLocation> locs = blockLocObj.getLocationsList();
+		BlockLocations.Builder blkLocations = BlockLocations.newBuilder();
+		blkLocations.setBlockNumber(blockNumber);
+		
+		DataNodeLocation dataNode = locs.get(1);
+		
+		
+		blkLocations.addLocations(dataNode);
+		
+		Registry registry=LocateRegistry.getRegistry(dataNode.getIp(),dataNode.getPort());
+
+		IDataNode dataStub;
+		try {
+			dataStub = (IDataNode) registry.lookup(Constants.DATA_NODE_ID);
+			
+			WriteBlockRequest.Builder req = WriteBlockRequest.newBuilder();
+			
+			req.addData(writeBlockRequestObj.getData(0));
+			req.setBlockInfo(blkLocations);
+			
+			dataStub.writeBlock(req.build().toByteArray());
+			
+			
+		} catch (NotBoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
 	
 	
 	public static void main(String[] args) {
@@ -210,7 +234,7 @@ public class DataNodeDriver implements IDataNode {
 		
 		sendBlockReport();
 		
-//		sendHeartBeat();
+		sendHeartBeat();
 		
 		
 	}
