@@ -98,7 +98,7 @@ public class NameNodeDriver implements INameNode
 		// TODO Auto-generated method stub
 		
 		
-		System.out.println("Open file called");
+//		System.out.println("Open file called");
 		OpenFileResponse.Builder res = OpenFileResponse.newBuilder();
 		res.setStatus(Constants.STATUS_FAILED);
 		
@@ -221,7 +221,7 @@ public class NameNodeDriver implements INameNode
 	public byte[] assignBlock(byte[] inp) throws RemoteException {
 		// TODO Auto-generated method stub
 		
-		System.out.println("Assign block called");
+//		System.out.println("Assign block called");
 		AssignBlockResponse.Builder res = AssignBlockResponse.newBuilder();
 		res.setStatus(Constants.STATUS_FAILED);
 		
