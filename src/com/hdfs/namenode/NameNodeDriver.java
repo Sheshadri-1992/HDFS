@@ -50,15 +50,16 @@ public class NameNodeDriver implements INameNode
 	public static int numBlock=0;
 	
 	public static void main(String[] args) {
-		// TODO Auto-generated method stub
 
+		//set the security manager
+        if (System.getSecurityManager() == null) {
+            System.setSecurityManager(new SecurityManager());
+        }
+		
 		dataNodes = new HashMap<>();
 		blockLocations = new HashMap<>();
 		heartBeatDataNodes = new HashMap<>();
 		
-//		DataNodeLocation.Builder loc = DataNodeLocation.newBuilder();	
-//		dataNodes.put(1,loc.build());
-//		
 		putFile = new PutFile();
 		getFile = new GetFile();
 		
@@ -268,7 +269,6 @@ public class NameNodeDriver implements INameNode
 				blocks.addLocations(value);
 			}
 			
-//			sSHESH WILL BE RIGHT BACK!!
 	
 //			System.out.println("Num block "+numBlock);
 			blocks.setBlockNumber(numBlock);

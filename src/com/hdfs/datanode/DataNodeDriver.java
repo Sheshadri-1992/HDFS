@@ -49,7 +49,7 @@ public class DataNodeDriver implements IDataNode {
 	/**Interface methods start here **/
 	public byte[] readBlock(byte[] inp) throws RemoteException {
 		// TODO Auto-generated method stub
-		System.out.println("Hello");
+//		System.out.println("Hello");
 		/**Here I need to 
 		 * a) open the file
 		 * b) Read the data
@@ -114,7 +114,7 @@ public class DataNodeDriver implements IDataNode {
 
 	public byte[] writeBlock(byte[] inp) throws RemoteException {
 		// TODO Auto-generated method stub
-		System.out.println("In Method write Block");
+//		System.out.println("In Method write Block");
 		byte[] receivedByteArray;
 		
 		try {
@@ -219,13 +219,14 @@ public class DataNodeDriver implements IDataNode {
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
 
-		System.out.println("Datanode");
+        if (System.getSecurityManager() == null) {
+            System.setSecurityManager(new SecurityManager());
+        }
 		
-		
-		
-		/**Need an argument from command line to uniquely identify the data Node **/
-	
-		id = Integer.parseInt(args[0]);
+		/**Need an argument from command line to uniquely identify the data Node **/	
+		id = Integer.parseInt(args[0]);		
+		System.out.println("Datanode "+id);
+
 		
 		dataBlocks = readBlocksFromFile();
 //		System.out.println(dataBlocks);
@@ -252,6 +253,7 @@ public class DataNodeDriver implements IDataNode {
 		//Registering an object in java RMI environment
 		try
 		{
+			System.out.println("IP is: "+getMyIP()+" Port is: "+BINDING_PORT);
 			System.setProperty("java.rmi.server.hostname",getMyIP());
 			register = LocateRegistry.createRegistry(BINDING_PORT);
 			IDataNode dataStub = (IDataNode) UnicastRemoteObject.exportObject(dataDriverObj,BINDING_PORT);
@@ -321,6 +323,7 @@ public class DataNodeDriver implements IDataNode {
 		Enumeration<NetworkInterface> n = null;
 		try {
 			n = NetworkInterface.getNetworkInterfaces();
+			
 		} catch (SocketException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
@@ -331,17 +334,26 @@ public class DataNodeDriver implements IDataNode {
 	             NetworkInterface e = n.nextElement();
 //	             System.out.println("Interface: " + e.getName());
 	             
-	             Enumeration<InetAddress> a = e.getInetAddresses();
-	             for (; a.hasMoreElements();)
-	             {
-	                     InetAddress addr = a.nextElement();
-//	                     System.out.println("  " + addr.getHostAddress());
-	                     if(e.getName().equals(Constants.CONNECTIVITY))
-	                     {
-	                    	myIp = addr.getHostAddress(); 
-	                     }
-	             }
+	             
+	             
+	            	 Enumeration<InetAddress> a = e.getInetAddresses();
+		             for (; a.hasMoreElements();)
+		             {
+		                     InetAddress addr = a.nextElement();
+//		                     System.out.println("  " + addr.getHostAddress());
+		                     if(e.getName().equals(Constants.CONNECTIVITY))
+		                     {
+		                    	myIp = addr.getHostAddress(); 
+		                     }
+		             }
+
+	             
+	            	 
+	             
+	             
 	     }
+	     
+	     
 	     
 	     return myIp;
 

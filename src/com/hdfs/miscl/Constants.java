@@ -4,7 +4,7 @@ public final class Constants {
 
 
 	public static final String  NAME_NODE = "NameNode";  //added by shweta
-	public static final String  NAME_NODE_IP = "10.2.129.126";  //added by shweta
+	public static final String  NAME_NODE_IP = "10.0.0.2";  //added by shweta
 	public static final String DATA_NODE_ID = "DataNode";//constant by sheshadri
 	
 	
@@ -18,11 +18,10 @@ public final class Constants {
 	public static final String OUTPUT_FILE = "out_"; //constant by sheshadri
 	
 	
-	public static final int BLOCK_SIZE=32;
+	public static final int BLOCK_SIZE=32*1024*1024;// 32 MB
 	public static final int DATA_NODE_PORT=10000;
 	public static final long BLOCK_REPORT_FREQ = 5000;
 	public static final long HEART_BEAT_FREQ = 5000;
 
-	public static final String CONNECTIVITY = "wlan0"; //eth0 if you use a cable
-//	public static final String CONNECTIVITY = "eth0"; //eth0 if you use a cable
+	public static final String CONNECTIVITY = "eth0"; //eth0 if you use a cable	
 }

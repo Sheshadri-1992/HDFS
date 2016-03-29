@@ -44,10 +44,11 @@ public class ClientDriver {
 	
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
-//		bindToRegistry();
-//		System.exit(0);
-		/**Allocating 32MB of memory to byteArray **/
-//		byteArray = new byte[(int)Constants.BLOCK_SIZE];
+
+        if (System.getSecurityManager() == null) {
+            System.setSecurityManager(new SecurityManager());
+        }
+
 		
 		fileName = args[0];
 		
