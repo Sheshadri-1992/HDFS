@@ -6,6 +6,7 @@ import static com.hdfs.miscl.Constants.NAME_NODE;
 import static com.hdfs.miscl.Constants.NAME_NODE_IP;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
@@ -57,6 +58,8 @@ public class DataNodeDriver implements IDataNode {
 		 * d) send back
 		 */
 		
+//		System.out.println("in reader");
+		
 		ReadBlockResponse.Builder readBlkResObj = ReadBlockResponse.newBuilder();
 		
 		ReadBlockRequest readBlkReqObj;
@@ -64,41 +67,45 @@ public class DataNodeDriver implements IDataNode {
 			readBlkReqObj = ReadBlockRequest.parseFrom(inp);
 			int blockNumber = readBlkReqObj.getBlockNumber();
 			
-			FileReaderClass fileReaderObj = new FileReaderClass(blockNumber+"");
-			fileReaderObj.openFile();
-			
-//			StringBuilder myStringBuilder = new StringBuilder();
-			
-			String myLine = "";
-			char c;
+
+			BufferedReader breader = null;
 			try {
-//				myLine = fileReaderObj.buff_reader.readLine();
-				int character = fileReaderObj.buff_reader.read();
-				while(character!=-1)
-				{
-//					myStringBuilder.append(myLine+"\n");
-//					myLine=fileReaderObj.buff_reader.readLine();
-					c = (char) character;
-					myLine = myLine + c; 
-					
-					character =  fileReaderObj.buff_reader.read();		
-					
-					
-				}
+				breader = new BufferedReader(new FileReader(blockNumber+"") );
+			} catch (FileNotFoundException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+			
+			File myFile = new File(blockNumber+"");
+			long FILESIZE = myFile.length();
+			
+			
+			int bytesToBeRead = (int) FILESIZE;
+			
+
+			
+			char[] newCharArray = new char[bytesToBeRead];
+			
+			try {
 				
-				
-//				myLine=myStringBuilder.toString().substring(0, myStringBuilder.toString().length()-1);			
+				breader.read(newCharArray, 0, bytesToBeRead);
 				
 				
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
-				System.out.println("Required File block does not exist");
-				readBlkResObj.setStatus(Constants.STATUS_FAILED);
-
+				e.printStackTrace();
+			}		
+			try {
+				breader.close();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			}
 			
+			
+//			System.out.println("done reading");
 			readBlkResObj.setStatus(Constants.STATUS_SUCCESS);			
-			readBlkResObj.addData(ByteString.copyFrom(myLine.getBytes()));
+			readBlkResObj.addData(ByteString.copyFrom(new String(newCharArray).getBytes()));
 			
 			
 		} catch (InvalidProtocolBufferException e) {
