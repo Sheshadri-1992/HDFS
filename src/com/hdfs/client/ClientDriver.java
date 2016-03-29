@@ -90,7 +90,11 @@ public class ClientDriver {
 				ListFilesResponse listFileResObj = ListFilesResponse.parseFrom(responseArray);
 				List<String> fileNames = listFileResObj.getFileNamesList();
 				
-				System.out.println("File names are "+fileNames.toString());
+				System.out.println("File names are :\n");
+				for(String name : fileNames)
+				{
+					System.out.println(name);
+				}
 				
 				
 			} catch (InvalidProtocolBufferException e) {
