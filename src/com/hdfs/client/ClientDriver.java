@@ -216,6 +216,7 @@ public class ClientDriver {
 						System.out.println("All data nodes are down :( ");
 						System.exit(0);
 					}
+					
 
 					/**Construct Read block request **/
 					ReadBlockRequest.Builder readBlockReqObj = ReadBlockRequest.newBuilder();
@@ -232,10 +233,9 @@ public class ClientDriver {
 							System.exit(0);
 						}
 						
-						responseArray = readBlockResObj.getData(0).toByteArray();
-						String str = new String(responseArray, StandardCharsets.UTF_8);
-//						System.out.print(str);
-						fileWriteObj.writeonly(str);
+						responseArray = readBlockResObj.getData(0).toByteArray();						
+						String str = new String(responseArray, StandardCharsets.UTF_8);						
+						fileWriteObj.writeonly(str);												
 
 				}
 				
