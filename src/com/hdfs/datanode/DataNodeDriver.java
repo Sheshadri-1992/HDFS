@@ -16,6 +16,9 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
@@ -39,6 +42,8 @@ import com.hdfs.miscl.Hdfs.ReadBlockResponse;
 import com.hdfs.miscl.Hdfs.WriteBlockRequest;
 import com.hdfs.namenode.INameNode;
 import com.hdfs.miscl.*;
+import java.io.*;
+import java.nio.*;
 
 public class DataNodeDriver implements IDataNode {
 
@@ -68,44 +73,28 @@ public class DataNodeDriver implements IDataNode {
 			int blockNumber = readBlkReqObj.getBlockNumber();
 			
 
-			BufferedReader breader = null;
-			try {
-				breader = new BufferedReader(new FileReader(blockNumber+"") );
-			} catch (FileNotFoundException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
-			}
 			
 			File myFile = new File(blockNumber+"");
-			long FILESIZE = myFile.length();
-			
-			
+			long FILESIZE = myFile.length();			
 			int bytesToBeRead = (int) FILESIZE;
 			
-
-			
-			char[] newCharArray = new char[bytesToBeRead];
-			
+			byte[] newByteArray = null ;//= new byte[bytesToBeRead];
+			Path path = Paths.get(blockNumber+"");
 			try {
-				
-				breader.read(newCharArray, 0, bytesToBeRead);
-				
-				
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}		
-			try {
-				breader.close();
+				newByteArray = Files.readAllBytes(path);
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
+			
+			readBlkResObj.addData(ByteString.copyFrom(newByteArray));
+//			for(int i=0;i<FILESIZE;i++)
+//				readBlkResObj.addData(ByteString.copyFrom(newByteArray, i, 1));
 			
 			
 //			System.out.println("done reading");
 			readBlkResObj.setStatus(Constants.STATUS_SUCCESS);			
-			readBlkResObj.addData(ByteString.copyFrom(new String(newCharArray).getBytes()));
+//			readBlkResObj.addData(ByteString.copyFrom(new String(newCharArray).getBytes()));
 			
 			
 		} catch (InvalidProtocolBufferException e) {
